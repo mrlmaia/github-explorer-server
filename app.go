@@ -51,19 +51,37 @@ func repositoryHandlerGet(w http.ResponseWriter, r *http.Request) {
 	name := repoOwner + "/" + repoName
 
 	apiResponse, err := http.Get(baseUrl + "repos/" + name)
-	log.Println("StatusCode: ", apiResponse.StatusCode)
 
 	if err != nil {
+		w.WriteHeader(500)
 		log.Fatalln("Error at the request")
-		// json.NewEncoder(w).Encode(err)
+		erro := AppError{Message: "Internal server error"}
+		json.NewEncoder(w).Encode(erro)
+		return
 	}
-	log.Print("err", err)
+
+	if code := apiResponse.StatusCode; code > 299 || code < 200 {
+		erro := AppError{}
+		if code == 404 {
+			erro = AppError{Message: "Repository not found"}
+		} else {
+			erro = AppError{Message: "An error with GitHub's API has ocurred"}
+		}
+
+		json.NewEncoder(w).Encode(erro)
+		w.WriteHeader(500)
+		log.Print(erro)
+		return
+	}
 
 	defer apiResponse.Body.Close()
 
 	data, err := ioutil.ReadAll(apiResponse.Body)
 	if err != nil {
+		erro := AppError{Message: "Internal server error"}
+		w.WriteHeader(500)
 		log.Fatal("Error processing result")
+		json.NewEncoder(w).Encode(erro)
 	}
 
 	result := Repository{}
@@ -71,10 +89,6 @@ func repositoryHandlerGet(w http.ResponseWriter, r *http.Request) {
 	json.Unmarshal(data, &result)
 
 	json.NewEncoder(w).Encode(result)
-}
-
-func makeHttpRequest(url string, data interface{}) {
-
 }
 
 func main() {
