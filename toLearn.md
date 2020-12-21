@@ -1,2 +1,3 @@
-- Catch errors from github api
-- use some lib to create routes (maybe fiber)
+persist data in the DB
+
+create a crud
