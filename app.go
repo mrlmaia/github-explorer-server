@@ -5,6 +5,9 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
+
+	"github.com/go-chi/chi"
+	"github.com/go-chi/chi/middleware"
 )
 
 var baseUrl = "https://api.github.com/"
@@ -23,13 +26,6 @@ type AppError struct {
 type Response struct {
 	Error AppError   `json:"error"`
 	Data  Repository `json:"data"`
-}
-
-func repositoryHandler(w http.ResponseWriter, r *http.Request) {
-	if r.Method == "GET" {
-		repositoryHandlerGet(w, r)
-	}
-
 }
 
 func repositoryHandlerGet(w http.ResponseWriter, r *http.Request) {
@@ -68,9 +64,8 @@ func repositoryHandlerGet(w http.ResponseWriter, r *http.Request) {
 			erro = AppError{Message: "An error with GitHub's API has ocurred"}
 		}
 
+		w.WriteHeader(400)
 		json.NewEncoder(w).Encode(erro)
-		w.WriteHeader(500)
-		log.Print(erro)
 		return
 	}
 
@@ -92,6 +87,8 @@ func repositoryHandlerGet(w http.ResponseWriter, r *http.Request) {
 }
 
 func main() {
-	http.HandleFunc("/repository", repositoryHandler)
-	http.ListenAndServe(":8080", nil)
+	router := chi.NewRouter()
+	router.Use(middleware.Logger)
+	router.Get("/repository", repositoryHandlerGet)
+	http.ListenAndServe(":8080", router)
 }
